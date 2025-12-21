@@ -1,5 +1,5 @@
-const { User } = require('../models');
-const { generateToken } = require('../utils/jwt');
+const { User } = require("../models");
+const { generateToken } = require("../utils/jwt");
 
 /**
  * 登录接口
@@ -13,7 +13,7 @@ async function login(ctx) {
       ctx.status = 400;
       ctx.body = {
         code: 400,
-        message: '用户名和密码不能为空'
+        message: "用户名和密码不能为空",
       };
       return;
     }
@@ -25,7 +25,7 @@ async function login(ctx) {
       ctx.status = 401;
       ctx.body = {
         code: 401,
-        message: '用户名或密码错误'
+        message: "用户名或密码错误",
       };
       return;
     }
@@ -35,7 +35,7 @@ async function login(ctx) {
       ctx.status = 401;
       ctx.body = {
         code: 401,
-        message: '用户已被禁用'
+        message: "用户已被禁用",
       };
       return;
     }
@@ -46,7 +46,7 @@ async function login(ctx) {
       ctx.status = 401;
       ctx.body = {
         code: 401,
-        message: '用户名或密码错误'
+        message: "用户名或密码错误",
       };
       return;
     }
@@ -55,17 +55,14 @@ async function login(ctx) {
     const token = generateToken({
       id: user.id,
       username: user.username,
-      role_id: user.role_id
+      role_id: user.role_id,
     });
-
-    // 获取用户权限树
-    const permissionTree = await user.getPermissionTree();
 
     // 返回登录成功信息
     ctx.status = 200;
     ctx.body = {
       code: 200,
-      message: '登录成功',
+      message: "登录成功",
       data: {
         user: {
           id: user.id,
@@ -74,18 +71,17 @@ async function login(ctx) {
           phone: user.phone,
           email: user.email,
           role_id: user.role_id,
-          status: user.status
+          status: user.status,
         },
         token,
-        permissions: permissionTree
-      }
+      },
     };
   } catch (error) {
-    console.error('登录错误:', error);
+    console.error("登录错误:", error);
     ctx.status = 500;
     ctx.body = {
       code: 500,
-      message: '服务器内部错误'
+      message: "服务器内部错误",
     };
   }
 }
@@ -96,28 +92,26 @@ async function login(ctx) {
 async function getCurrentUser(ctx) {
   try {
     const user = ctx.user;
-    const permissionTree = await user.getPermissionTree();
 
     ctx.status = 200;
     ctx.body = {
       code: 200,
-      message: '获取用户信息成功',
+      message: "获取用户信息成功",
       data: {
         user,
-        permissions: permissionTree
-      }
+      },
     };
   } catch (error) {
-    console.error('获取用户信息错误:', error);
+    console.error("获取用户信息错误:", error);
     ctx.status = 500;
     ctx.body = {
       code: 500,
-      message: '服务器内部错误'
+      message: "服务器内部错误",
     };
   }
 }
 
 module.exports = {
   login,
-  getCurrentUser
+  getCurrentUser,
 };
