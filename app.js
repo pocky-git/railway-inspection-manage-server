@@ -1,6 +1,9 @@
 const Koa = require("koa");
 const bodyParser = require("koa-bodyparser");
 const authRouter = require("./routes/auth");
+const tenantRouter = require("./routes/tenant");
+const departmentRouter = require("./routes/department");
+const userRouter = require("./routes/user");
 const { connectDB } = require("./config/db"); // 初始化数据库连接
 connectDB();
 
@@ -13,6 +16,12 @@ app.use(bodyParser());
 // 注册路由
 app.use(authRouter.routes());
 app.use(authRouter.allowedMethods());
+app.use(tenantRouter.routes());
+app.use(tenantRouter.allowedMethods());
+app.use(departmentRouter.routes());
+app.use(departmentRouter.allowedMethods());
+app.use(userRouter.routes());
+app.use(userRouter.allowedMethods());
 
 // 错误处理中间件
 app.use(async (ctx, next) => {

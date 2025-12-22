@@ -17,24 +17,37 @@ const UserSchema = new Schema(
     },
     real_name: {
       type: String,
-      required: false,
+      required: true,
       comment: "真实姓名",
     },
     phone: {
       type: String,
-      required: false,
+      required: true,
       comment: "手机号",
     },
     email: {
       type: String,
-      required: false,
+      required: true,
+      unique: true,
       comment: "邮箱",
     },
     role_id: {
       type: Number,
       required: true,
-      default: 2,
-      comment: "角色ID，1-超级管理员，2-普通管理员",
+      default: 4,
+      comment: "角色ID，1-超级管理员，2-租户管理员，3-部门管理员，4-普通用户",
+    },
+    tenant_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      required: false,
+      comment: "所属租户ID（普通用户和部门管理员必填）",
+    },
+    department_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      required: false,
+      comment: "所属部门ID（普通用户必填）",
     },
     status: {
       type: Boolean,

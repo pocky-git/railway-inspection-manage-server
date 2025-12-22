@@ -1,5 +1,6 @@
 const { User } = require("../models");
 const { generateToken } = require("../utils/jwt");
+const { ROLE_ID } = require("../constants/role");
 
 /**
  * 登录接口
@@ -111,7 +112,94 @@ async function getCurrentUser(ctx) {
   }
 }
 
+/**
+ * 创建超级管理员账号
+ * 该接口用于初始化系统时创建超级管理员
+ */
+async function createSuperAdmin(ctx) {
+  try {
+    const { username, password, real_name, phone, email } = ctx.request.body;
+
+    // 参数验证
+    if (!username || !password || !real_name || !phone || !email) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "用户名、密码、真实姓名、手机号和邮箱不能为空",
+      };
+      return;
+    }
+
+    // 检查是否已经存在超级管理员
+    const existingSuperAdmin = await User.findOne({
+      role_id: ROLE_ID.SUPER_ADMIN,
+    });
+    if (existingSuperAdmin) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "超级管理员账号已存在",
+      };
+      return;
+    }
+
+    // 检查用户名是否已存在
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "用户名已存在",
+      };
+      return;
+    }
+
+    // 检查邮箱是否已存在
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "邮箱已存在",
+      };
+      return;
+    }
+
+    // 创建超级管理员
+    const superAdmin = await User.create({
+      username,
+      password,
+      real_name,
+      phone,
+      email,
+      role_id: ROLE_ID.SUPER_ADMIN,
+      // 超级管理员不需要租户和部门
+      tenant_id: null,
+      department_id: null,
+    });
+
+    // 移除密码字段
+    const superAdminWithoutPassword = superAdmin.toObject();
+    delete superAdminWithoutPassword.password;
+
+    ctx.status = 200;
+    ctx.body = {
+      code: 200,
+      message: "超级管理员账号创建成功",
+      data: { user: superAdminWithoutPassword },
+    };
+  } catch (error) {
+    console.error("创建超级管理员错误:", error);
+    ctx.status = 500;
+    ctx.body = {
+      code: 500,
+      message: "服务器内部错误",
+    };
+  }
+}
+
 module.exports = {
   login,
   getCurrentUser,
+  createSuperAdmin,
 };
