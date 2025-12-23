@@ -11,7 +11,6 @@ const TenantSchema = new Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
       comment: "租户邮箱",
     },
     phone: {

@@ -28,7 +28,6 @@ const UserSchema = new Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
       comment: "邮箱",
     },
     role_id: {

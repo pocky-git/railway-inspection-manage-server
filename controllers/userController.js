@@ -119,9 +119,7 @@ async function addUser(ctx) {
       email,
       role_id: userRoleId,
       tenant_id: userTenantId,
-      tenant_name,
       department_id: userDepartmentId,
-      department_name,
     });
 
     // 移除密码字段
@@ -266,7 +264,12 @@ async function getUsers(ctx) {
       return;
     }
 
-    const users = await User.find(query)
+    const users = await User.find({
+      ...query,
+      role_id: {
+        $nin: [ROLE_ID.SUPER_ADMIN, ROLE_ID.TENANT_ADMIN],
+      },
+    })
       .skip(skip)
       .limit(Number(pageSize))
       .sort({ createdAt: -1 })
