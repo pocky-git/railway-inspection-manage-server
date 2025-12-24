@@ -237,7 +237,14 @@ async function deleteUser(ctx) {
  */
 async function getUsers(ctx) {
   try {
-    const { tenant_id, department_id, page = 1, pageSize = 10 } = ctx.query;
+    const {
+      tenant_id,
+      department_id,
+      username,
+      real_name,
+      page = 1,
+      pageSize = 10,
+    } = ctx.query;
     const currentUser = ctx.user;
     const skip = (page - 1) * pageSize;
 
@@ -264,12 +271,15 @@ async function getUsers(ctx) {
       return;
     }
 
-    const users = await User.find({
-      ...query,
-      role_id: {
-        $nin: [ROLE_ID.SUPER_ADMIN, ROLE_ID.TENANT_ADMIN],
-      },
-    })
+    // 根据用户名和真实姓名筛选
+    if (username) {
+      query.username = { $regex: username, $options: "i" };
+    }
+    if (real_name) {
+      query.real_name = { $regex: real_name, $options: "i" };
+    }
+
+    const users = await User.find(query)
       .skip(skip)
       .limit(Number(pageSize))
       .sort({ createdAt: -1 })

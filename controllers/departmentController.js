@@ -125,7 +125,7 @@ async function deleteDepartment(ctx) {
  */
 async function getDepartments(ctx) {
   try {
-    const { tenant_id, page = 1, pageSize = 10 } = ctx.query;
+    const { tenant_id, page = 1, pageSize = 10, name } = ctx.query;
     const user = ctx.user;
     const skip = (page - 1) * pageSize;
 
@@ -150,6 +150,10 @@ async function getDepartments(ctx) {
         message: "没有权限查看部门列表",
       };
       return;
+    }
+
+    if (name) {
+      query.name = { $regex: name, $options: "i" };
     }
 
     const departments = await Department.find(query)

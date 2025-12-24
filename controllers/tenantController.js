@@ -132,15 +132,19 @@ async function deleteTenant(ctx) {
  */
 async function getTenants(ctx) {
   try {
-    const { page = 1, pageSize = 10 } = ctx.query;
+    const { page = 1, pageSize = 10, name, username } = ctx.query;
     const skip = (page - 1) * pageSize;
 
-    const tenants = await Tenant.find({})
+    const query = {};
+    if (name) query.name = { $regex: name, $options: "i" };
+    if (username) query.username = { $regex: username, $options: "i" };
+
+    const tenants = await Tenant.find(query)
       .skip(skip)
       .limit(Number(pageSize))
       .sort({ createdAt: -1 });
 
-    const total = await Tenant.countDocuments({});
+    const total = await Tenant.countDocuments(query);
 
     ctx.status = 200;
     ctx.body = {
