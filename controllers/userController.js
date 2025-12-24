@@ -37,7 +37,7 @@ async function addUser(ctx) {
     // 超级管理员可以添加任意角色的用户
     if (currentUser.role_id === ROLE_ID.SUPER_ADMIN) {
       // 验证租户ID和部门ID是否存在
-      if (userRoleId >= 3 && !userTenantId) {
+      if (userRoleId >= ROLE_ID.DEPARTMENT_ADMIN && !userTenantId) {
         ctx.status = 400;
         ctx.body = {
           code: 400,
@@ -45,7 +45,7 @@ async function addUser(ctx) {
         };
         return;
       }
-      if (userRoleId === 4 && !userDepartmentId) {
+      if (userRoleId === ROLE_ID.REGULAR_USER && !userDepartmentId) {
         ctx.status = 400;
         ctx.body = {
           code: 400,
@@ -55,8 +55,8 @@ async function addUser(ctx) {
       }
     }
     // 租户管理员只能添加部门管理员和普通用户
-    else if (currentUser.role_id === 2) {
-      if (userRoleId <= 2) {
+    else if (currentUser.role_id === ROLE_ID.TENANT_ADMIN) {
+      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
@@ -66,7 +66,7 @@ async function addUser(ctx) {
       }
       // 只能为自己的租户添加用户
       userTenantId = currentUser.tenant_id;
-      if (userRoleId === 4 && !userDepartmentId) {
+      if (userRoleId === ROLE_ID.REGULAR_USER && !userDepartmentId) {
         ctx.status = 400;
         ctx.body = {
           code: 400,
@@ -76,8 +76,8 @@ async function addUser(ctx) {
       }
     }
     // 部门管理员只能添加普通用户
-    else if (currentUser.role_id === 3) {
-      if (userRoleId !== 4) {
+    else if (currentUser.role_id === ROLE_ID.DEPARTMENT_ADMIN) {
+      if (userRoleId !== ROLE_ID.REGULAR_USER) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
@@ -430,9 +430,165 @@ async function getUserById(ctx) {
   }
 }
 
+/**
+ * 更新用户
+ */
+async function updateUser(ctx) {
+  try {
+    const { id } = ctx.params;
+    const {
+      username,
+      password,
+      real_name,
+      phone,
+      email,
+      tenant_id,
+      department_id,
+      role_id,
+    } = ctx.request.body;
+    const currentUser = ctx.user;
+
+    const user = await User.findById(id);
+    if (!user) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: "用户不存在",
+      };
+      return;
+    }
+
+    // 参数验证
+    if (!username || !password || !real_name || !phone || !email) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "用户名、密码、真实姓名、手机号和邮箱不能为空",
+      };
+      return;
+    }
+
+    // 权限验证
+    let userRoleId = role_id || ROLE_ID.REGULAR_USER;
+    let userTenantId = tenant_id;
+    let userDepartmentId = department_id;
+
+    // 超级管理员可以添加任意角色的用户
+    if (currentUser.role_id === ROLE_ID.SUPER_ADMIN) {
+      // 验证租户ID和部门ID是否存在
+      if (userRoleId >= ROLE_ID.DEPARTMENT_ADMIN && !userTenantId) {
+        ctx.status = 400;
+        ctx.body = {
+          code: 400,
+          message: "部门管理员和普通用户必须指定租户ID",
+        };
+        return;
+      }
+      if (userRoleId === ROLE_ID.REGULAR_USER && !userDepartmentId) {
+        ctx.status = 400;
+        ctx.body = {
+          code: 400,
+          message: "普通用户必须指定部门ID",
+        };
+        return;
+      }
+    }
+    // 租户管理员只能添加部门管理员和普通用户
+    else if (currentUser.role_id === ROLE_ID.TENANT_ADMIN) {
+      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
+        ctx.status = 403;
+        ctx.body = {
+          code: 403,
+          message: "租户管理员只能添加部门管理员和普通用户",
+        };
+        return;
+      }
+      // 只能为自己的租户添加用户
+      userTenantId = currentUser.tenant_id;
+      if (userRoleId === ROLE_ID.REGULAR_USER && !userDepartmentId) {
+        ctx.status = 400;
+        ctx.body = {
+          code: 400,
+          message: "普通用户必须指定部门ID",
+        };
+        return;
+      }
+    }
+    // 部门管理员只能添加普通用户
+    else if (currentUser.role_id === ROLE_ID.DEPARTMENT_ADMIN) {
+      if (userRoleId !== ROLE_ID.REGULAR_USER) {
+        ctx.status = 403;
+        ctx.body = {
+          code: 403,
+          message: "部门管理员只能添加普通用户",
+        };
+        return;
+      }
+      // 只能为自己的租户和部门添加用户
+      userTenantId = currentUser.tenant_id;
+      userDepartmentId = currentUser.department_id;
+    }
+    // 普通用户没有添加用户的权限
+    else {
+      ctx.status = 403;
+      ctx.body = {
+        code: 403,
+        message: "没有权限添加用户",
+      };
+      return;
+    }
+
+    // 检查用户名是否已存在
+    const existingUser = await User.findOne({ username, _id: { $ne: id } });
+    if (existingUser) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "用户名已存在",
+      };
+      return;
+    }
+
+    // 更新用户
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        username,
+        password,
+        real_name,
+        phone,
+        email,
+        role_id: userRoleId,
+        tenant_id: userTenantId,
+        department_id: userDepartmentId,
+      },
+      { new: true }
+    );
+
+    // 移除密码字段
+    const userWithoutPassword = updatedUser.toObject();
+    delete userWithoutPassword.password;
+
+    ctx.status = 200;
+    ctx.body = {
+      code: 200,
+      message: "用户信息更新成功",
+      data: { user: userWithoutPassword },
+    };
+  } catch (error) {
+    console.error("更新用户错误:", error);
+    ctx.status = 500;
+    ctx.body = {
+      code: 500,
+      message: "服务器内部错误",
+    };
+  }
+}
+
 module.exports = {
   addUser,
   deleteUser,
   getUsers,
   getUserById,
+  updateUser,
 };

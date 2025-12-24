@@ -8,61 +8,32 @@ const { ROLE_ID } = require("../constants/role");
  */
 async function addTenant(ctx) {
   try {
-    const { name, email, phone, username, password } = ctx.request.body;
+    const { name } = ctx.request.body;
 
     // 参数验证
-    if (!name || !email || !phone || !username || !password) {
+    if (!name) {
       ctx.status = 400;
       ctx.body = {
         code: 400,
-        message: "租户名称、邮箱、手机号、账号和密码不能为空",
-      };
-      return;
-    }
-
-    // 检查用户名是否已存在
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      ctx.status = 400;
-      ctx.body = {
-        code: 400,
-        message: "用户名已存在",
+        message: "租户名称不能为空",
       };
       return;
     }
 
     // 检查租户账号是否已存在
-    const existingTenant = await Tenant.findOne({ username });
+    const existingTenant = await Tenant.findOne({ name });
     if (existingTenant) {
       ctx.status = 400;
       ctx.body = {
         code: 400,
-        message: "租户账号已存在",
+        message: "租户名称已存在",
       };
       return;
     }
 
-    // 密码加密
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // 创建租户
     const tenant = await Tenant.create({
       name,
-      email,
-      phone,
-      username,
-      password: hashedPassword,
-    });
-
-    // 创建租户管理员用户
-    const tenantAdmin = await User.create({
-      username: tenant.username,
-      password,
-      real_name: tenant.name,
-      phone: tenant.phone,
-      email: tenant.email,
-      role_id: ROLE_ID.TENANT_ADMIN, // 租户管理员
-      tenant_id: tenant._id,
     });
 
     ctx.status = 200;
@@ -109,6 +80,9 @@ async function deleteTenant(ctx) {
       return;
     }
 
+    // 删除租户下的所有部门
+    await User.deleteMany({ department_id: id });
+
     // 删除租户下的所有用户
     await User.deleteMany({ tenant_id: id });
 
@@ -132,12 +106,11 @@ async function deleteTenant(ctx) {
  */
 async function getTenants(ctx) {
   try {
-    const { page = 1, pageSize = 10, name, username } = ctx.query;
+    const { page = 1, pageSize = 10, name } = ctx.query;
     const skip = (page - 1) * pageSize;
 
     const query = {};
     if (name) query.name = { $regex: name, $options: "i" };
-    if (username) query.username = { $regex: username, $options: "i" };
 
     const tenants = await Tenant.find(query)
       .skip(skip)
@@ -210,9 +183,74 @@ async function getTenantById(ctx) {
   }
 }
 
+/**
+ * 编辑租户
+ */
+async function updateTenant(ctx) {
+  try {
+    const { id } = ctx.params;
+    const { name } = ctx.request.body;
+
+    const tenant = await Tenant.findById(id);
+    if (!tenant) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: "租户不存在",
+      };
+      return;
+    }
+
+    // 参数验证
+    if (!name) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "租户名称不能为空",
+      };
+      return;
+    }
+
+    // 检查租户账号是否已存在
+    const existingTenant = await Tenant.findOne({ name, _id: { $ne: id } });
+    if (existingTenant) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "租户已存在",
+      };
+      return;
+    }
+
+    // 更新租户
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      id,
+      {
+        name,
+      },
+      { new: true }
+    );
+
+    ctx.status = 200;
+    ctx.body = {
+      code: 200,
+      message: "租户编辑成功",
+      data: { tenant: updatedTenant },
+    };
+  } catch (error) {
+    console.error("编辑租户错误:", error);
+    ctx.status = 500;
+    ctx.body = {
+      code: 500,
+      message: "服务器内部错误",
+    };
+  }
+}
+
 module.exports = {
   addTenant,
   deleteTenant,
   getTenants,
   getTenantById,
+  updateTenant,
 };

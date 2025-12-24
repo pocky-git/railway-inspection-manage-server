@@ -38,6 +38,20 @@ async function addDepartment(ctx) {
       departmentTenantId = user.tenant_id;
     }
 
+    // 检查部门名称是否已存在
+    const existingDepartment = await Department.findOne({
+      name,
+      tenant_id: departmentTenantId,
+    });
+    if (existingDepartment) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "部门已存在",
+      };
+      return;
+    }
+
     // 创建部门
     const department = await Department.create({
       name,
@@ -271,9 +285,99 @@ async function getDepartmentById(ctx) {
   }
 }
 
+/**
+ * 添加部门
+ */
+async function updateDepartment(ctx) {
+  try {
+    const { id } = ctx.params;
+    const { name, tenant_id } = ctx.request.body;
+    const user = ctx.user;
+
+    const department = await Department.findById(id);
+    if (!department) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: "部门不存在",
+      };
+      return;
+    }
+
+    // 参数验证
+    if (!name) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "部门名称不能为空",
+      };
+      return;
+    }
+
+    // 权限验证：只有超级管理员或租户管理员可以添加部门
+    if (
+      user.role_id !== ROLE_ID.SUPER_ADMIN &&
+      user.role_id !== ROLE_ID.TENANT_ADMIN
+    ) {
+      ctx.status = 403;
+      ctx.body = {
+        code: 403,
+        message: "没有权限添加部门",
+      };
+      return;
+    }
+
+    // 如果是租户管理员，只能为自己的租户添加部门
+    let departmentTenantId = tenant_id;
+    if (user.role_id === ROLE_ID.TENANT_ADMIN) {
+      departmentTenantId = user.tenant_id;
+    }
+
+    // 检查部门名称是否已存在
+    const existingDepartment = await Department.findOne({
+      name,
+      tenant_id: departmentTenantId,
+      _id: { $ne: id },
+    });
+    if (existingDepartment) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: "部门已存在",
+      };
+      return;
+    }
+
+    // 更新部门
+    const updatedDepartment = await Department.findByIdAndUpdate(
+      id,
+      {
+        name,
+        tenant_id: departmentTenantId,
+      },
+      { new: true }
+    );
+
+    ctx.status = 200;
+    ctx.body = {
+      code: 200,
+      message: "部门更新成功",
+      data: { department: updatedDepartment },
+    };
+  } catch (error) {
+    console.error("更新部门错误:", error);
+    ctx.status = 500;
+    ctx.body = {
+      code: 500,
+      message: "服务器内部错误",
+    };
+  }
+}
+
 module.exports = {
   addDepartment,
   deleteDepartment,
   getDepartments,
   getDepartmentById,
+  updateDepartment,
 };

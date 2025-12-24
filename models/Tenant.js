@@ -8,27 +8,6 @@ const TenantSchema = new Schema(
       required: true,
       comment: "租户名称",
     },
-    email: {
-      type: String,
-      required: true,
-      comment: "租户邮箱",
-    },
-    phone: {
-      type: String,
-      required: true,
-      comment: "租户手机号",
-    },
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      comment: "租户账号",
-    },
-    password: {
-      type: String,
-      required: true,
-      comment: "租户密码",
-    },
     status: {
       type: Boolean,
       required: true,

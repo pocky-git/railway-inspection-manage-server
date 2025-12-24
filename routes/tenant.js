@@ -61,4 +61,18 @@ router.get("/:id", authMiddleware, async (ctx) => {
   await tenantController.getTenantById(ctx);
 });
 
+// 根据ID编辑租户（只有超级管理员可以编辑）
+router.put("/:id", authMiddleware, async (ctx) => {
+  const user = ctx.user;
+  if (user.role_id !== ROLE_ID.SUPER_ADMIN) {
+    ctx.status = 403;
+    ctx.body = {
+      code: 403,
+      message: "只有超级管理员可以编辑租户",
+    };
+    return;
+  }
+  await tenantController.updateTenant(ctx);
+});
+
 module.exports = router;
