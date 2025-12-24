@@ -1,4 +1,4 @@
-const { Department, Tenant } = require("../models");
+const { Department, Tenant, User } = require("../models");
 const { ROLE_ID } = require("../constants/role");
 
 /**
@@ -104,6 +104,8 @@ async function deleteDepartment(ctx) {
 
     // 删除部门
     await Department.findByIdAndDelete(id);
+
+    await User.deleteMany({ department_id: id });
 
     ctx.status = 200;
     ctx.body = {
