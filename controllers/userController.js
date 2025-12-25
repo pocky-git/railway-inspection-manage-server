@@ -56,11 +56,11 @@ async function addUser(ctx) {
     }
     // 租户管理员只能添加部门管理员和普通用户
     else if (currentUser.role_id === ROLE_ID.TENANT_ADMIN) {
-      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
+      if (userRoleId <= ROLE_ID.SUPER_ADMIN) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
-          message: "租户管理员只能添加部门管理员和普通用户",
+          message: "租户管理员只能添加租户管理员、部门管理员、普通用户",
         };
         return;
       }
@@ -77,11 +77,11 @@ async function addUser(ctx) {
     }
     // 部门管理员只能添加普通用户
     else if (currentUser.role_id === ROLE_ID.DEPARTMENT_ADMIN) {
-      if (userRoleId !== ROLE_ID.REGULAR_USER) {
+      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
-          message: "部门管理员只能添加普通用户",
+          message: "部门管理员只能添加部门管理员、普通用户",
         };
         return;
       }
@@ -242,6 +242,7 @@ async function getUsers(ctx) {
       department_id,
       username,
       real_name,
+      role_id,
       page = 1,
       pageSize = 10,
     } = ctx.query;
@@ -271,12 +272,17 @@ async function getUsers(ctx) {
       return;
     }
 
-    // 根据用户名和真实姓名筛选
+    // 根据用户名筛选
     if (username) {
       query.username = { $regex: username, $options: "i" };
     }
+    // 根据真实姓名筛选
     if (real_name) {
       query.real_name = { $regex: real_name, $options: "i" };
+    }
+    // 根据角色筛选
+    if (role_id) {
+      query.role_id = role_id;
     }
 
     const users = await User.find(query)
@@ -495,11 +501,11 @@ async function updateUser(ctx) {
     }
     // 租户管理员只能添加部门管理员和普通用户
     else if (currentUser.role_id === ROLE_ID.TENANT_ADMIN) {
-      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
+      if (userRoleId <= ROLE_ID.SUPER_ADMIN) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
-          message: "租户管理员只能添加部门管理员和普通用户",
+          message: "租户管理员只能添加租户管理员、部门管理员、普通用户",
         };
         return;
       }
@@ -516,11 +522,11 @@ async function updateUser(ctx) {
     }
     // 部门管理员只能添加普通用户
     else if (currentUser.role_id === ROLE_ID.DEPARTMENT_ADMIN) {
-      if (userRoleId !== ROLE_ID.REGULAR_USER) {
+      if (userRoleId <= ROLE_ID.TENANT_ADMIN) {
         ctx.status = 403;
         ctx.body = {
           code: 403,
-          message: "部门管理员只能添加普通用户",
+          message: "部门管理员只能添加部门管理员、普通用户",
         };
         return;
       }
